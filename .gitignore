@@ -1,0 +1,14 @@
+# Environment — never commit real keys
+.env
+.env.local
+.env.*.local
+
+# Sensitive files
+API & Passwords.txt
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

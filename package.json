@@ -1,0 +1,13 @@
+{
+  "name": "hr-onboarding-rag",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "HR Onboarding RAG Assistant with eval harness",
+  "scripts": {
+    "eval:mock": "node eval/eval.mjs --mock --output",
+    "eval:live": "node eval/eval.mjs --output"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
