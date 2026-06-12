@@ -74,7 +74,47 @@ These scores are not a reflection of the RAG system's capability. They are a con
 
 ---
 
-## Runs 2+ — Live RAG (Pending Phase 3)
+## Run 2 — Phase 2 Retrieval Verification
+
+**Date:** 2026-06-12  
+**Mode:** Retrieval spot-check (`test-retrieval.mjs`) — no generation, retrieval only  
+**Purpose:** Confirm the vector store returns the correct chunk at Rank 1 before building the query pipeline
+
+### Sample query
+
+```
+node test-retrieval.mjs "When does my probation period end?"
+```
+
+| Rank | Similarity | Source | Content preview |
+|------|-----------|--------|-----------------|
+| 1 | 0.514 | role-faqs.md | **Q: What is the probation period?** 3 months from your start date... ✅ |
+| 2 | 0.477 | onboarding-checklist.md | Shadow at least one colleague... |
+| 3 | 0.453 | role-faqs.md | insurance with AXA PPP begins on the date your probation is passed... |
+
+### Result: Pass
+
+Rank 1 is the correct chunk and contains a complete, self-contained answer to the question. The 0.037-point gap between Rank 1 and Rank 2 provides meaningful separation for the retrieval cut.
+
+### Note on similarity values
+
+The absolute similarity scores (0.45–0.51) are lower than the illustrative examples in the phase-2 doc (0.73–0.89). This is expected behaviour for `text-embedding-3-small` — the model's cosine scores are not calibrated to a fixed scale. Retrieval correctness is determined by rank order and separation, not by the absolute value.
+
+### Ingestion summary
+
+| Metric | Value |
+|--------|-------|
+| Total chunks stored | 25 |
+| Files ingested | employee-handbook.md (10), onboarding-checklist.md (7), role-faqs.md (8) |
+| Embedding model | text-embedding-3-small |
+| Vector dimensions | 1536 |
+| Estimated ingestion cost | < $0.001 |
+
+Phase 2 criteria met. Phase 3 (n8n RAG flow) can proceed.
+
+---
+
+## Run 3+ — Live RAG (Pending Phase 3)
 
 Live eval results will be recorded here after the n8n RAG flow is built and deployed. The target is:
 

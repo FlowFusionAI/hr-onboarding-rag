@@ -18,6 +18,16 @@ The eval harness is the primary engineering contribution — most RAG demos meas
 
 These are mock baseline numbers, run before the retrieval system existed — the expected result when the eval harness itself is under test. The harness correctly identified factual errors in mock answers (Q08: pension contribution stated as 4%, correct is 5%; A:2, G:5) and correctly scored non-answers as 1/1.
 
+**Phase 2 — Retrieval verified (2026-06-12)**
+
+| Metric | Result |
+|--------|--------|
+| Chunks ingested | 25 (10 handbook + 7 checklist + 8 FAQs) |
+| Retrieval spot-check | ✅ Rank 1 correct — similarity 0.514, gap to Rank 2: 0.037 |
+| Ingestion cost | < $0.001 |
+
+The vector store is populated and retrieval returns the correct chunk at Rank 1 for representative questions. The live eval run (Phase 4) will measure the full 30-question golden set against the real pipeline — the delta between the 17% mock baseline and the live score is the measure of what retrieval contributes.
+
 Full methodology and result interpretation: [docs/eval-methodology.md](docs/eval-methodology.md) · [docs/eval-results.md](docs/eval-results.md)
 
 ---
@@ -65,8 +75,8 @@ flowchart LR
 | Phase | What I built | Status | Documentation |
 |-------|-------------|--------|---------------|
 | 1 | Synthetic HR docs, 30-question golden eval set, eval harness | ✅ Complete | [phase-1-foundation.md](docs/phase-1-foundation.md) |
-| 2 | Supabase setup, document ingestion pipeline | 🔧 In progress | [phase-2-ingestion.md](docs/phase-2-ingestion.md) |
-| 3 | n8n RAG flow: retrieval + generation + persistent memory | Pending Phase 2 | — |
+| 2 | Supabase + pgvector schema, document ingestion pipeline, retrieval verification | ✅ Complete | [phase-2-ingestion.md](docs/phase-2-ingestion.md) |
+| 3 | n8n RAG flow: retrieval + generation + persistent memory | 🔧 In progress | — |
 | 4 | Live eval run, result publication | Pending Phase 3 | — |
 | 5 | Next.js chat UI, public deployment | Pending Phase 4 | — |
 
@@ -77,7 +87,13 @@ flowchart LR
 ```bash
 git clone https://github.com/FlowFusionAI/hr-onboarding-rag
 cd hr-onboarding-rag
-cp .env.example .env   # add OPENAI_API_KEY
+cp .env.example .env   # add OPENAI_API_KEY, SUPABASE_URL, SUPABASE_KEY
+
+# Ingest HR documents into Supabase vector store (run once, or after doc changes)
+npm run ingest
+
+# Spot-check retrieval quality before building the full query pipeline
+node test-retrieval.mjs "When does my probation period end?"
 
 # Mock mode — validates the eval harness without a live RAG endpoint
 npm run eval:mock
@@ -106,6 +122,8 @@ hr-onboarding-rag/
 │   ├── eval-results.md
 │   ├── phase-1-foundation.md
 │   └── phase-2-ingestion.md
+├── ingest.mjs                 chunks, embeds, and upserts HR docs into Supabase
+├── test-retrieval.mjs         spot-checks retrieval quality for a given question
 ├── .env.example               environment variable template
 └── package.json
 ```

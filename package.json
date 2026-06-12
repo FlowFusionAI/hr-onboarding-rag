@@ -5,9 +5,16 @@
   "description": "HR Onboarding RAG Assistant with eval harness",
   "scripts": {
     "eval:mock": "node eval/eval.mjs --mock --output",
-    "eval:live": "node eval/eval.mjs --output"
+    "eval:live": "node eval/eval.mjs --output",
+    "ingest": "node ingest.mjs",
+    "test:retrieval": "node test-retrieval.mjs"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.1",
+    "dotenv": "^17.4.2",
+    "openai": "^6.42.0"
   }
 }
