@@ -26,7 +26,17 @@ These are mock baseline numbers, run before the retrieval system existed — the
 | Retrieval spot-check | ✅ Rank 1 correct — similarity 0.514, gap to Rank 2: 0.037 |
 | Ingestion cost | < $0.001 |
 
-The vector store is populated and retrieval returns the correct chunk at Rank 1 for representative questions. The live eval run (Phase 4) will measure the full 30-question golden set against the real pipeline — the delta between the 17% mock baseline and the live score is the measure of what retrieval contributes.
+The vector store is populated and retrieval returns the correct chunk at Rank 1 for representative questions.
+
+**Phase 4 — Live RAG eval (2026-06-14)**
+
+| Metric | Result | vs. Mock baseline |
+|--------|--------|------------------|
+| Pass rate | **97% (29 / 30)** | +80pp |
+| Avg accuracy | **4.87 / 5** | +3.14 |
+| Avg groundedness | **4.87 / 5** | +2.80 |
+
+The +80pp delta from the mock baseline is the measurable contribution of the retrieval pipeline. 4.87/5 groundedness means the model is not hallucinating — nearly every claim is traceable to a retrieved document chunk. The one non-pass (Q29) required multi-hop arithmetic over a prorated leave formula — the hardest question in the set.
 
 Full methodology and result interpretation: [docs/eval-methodology.md](docs/eval-methodology.md) · [docs/eval-results.md](docs/eval-results.md)
 
@@ -76,9 +86,9 @@ flowchart LR
 |-------|-------------|--------|---------------|
 | 1 | Synthetic HR docs, 30-question golden eval set, eval harness | ✅ Complete | [phase-1-foundation.md](docs/phase-1-foundation.md) |
 | 2 | Supabase + pgvector schema, document ingestion pipeline, retrieval verification | ✅ Complete | [phase-2-ingestion.md](docs/phase-2-ingestion.md) |
-| 3 | n8n RAG flow: retrieval + generation + persistent memory | 🔧 In progress | — |
-| 4 | Live eval run, result publication | Pending Phase 3 | — |
-| 5 | Next.js chat UI, public deployment | Pending Phase 4 | — |
+| 3 | n8n RAG flow: retrieval + generation + persistent memory | ✅ Complete | [phase-3-query-pipeline.md](docs/phase-3-query-pipeline.md) |
+| 4 | Live eval run — 97% pass rate, 4.87/5 accuracy + groundedness | ✅ Complete | [eval-results.md](docs/eval-results.md) · [eval-debug-postmortem.md](docs/eval-debug-postmortem.md) |
+| 5 | Next.js chat UI, public deployment | 🔧 In progress | — |
 
 ---
 

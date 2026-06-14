@@ -1,0 +1,393 @@
+{
+  "name": "HR RAG AI Agent with Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are BrightPath's HR onboarding assistant. You help new employees understand company policies, benefits, and procedures.\n\nYou will receive RETRIEVED CONTEXT documents followed by a QUESTION. Your job is to answer the question using only those documents.\n\nRULES:\n1. Answer ONLY from the retrieved context. Do not use outside knowledge.\n2. For every factual claim, cite the source — e.g. \"According to the Employee Handbook...\"\n3. If the answer is not in the retrieved context, respond with exactly: \"I don't have that information in the company documents. Please contact people@brightpath.io.\"\n4. Never invent numbers, dates, names, or policies.\n5. Be concise. New employees need direct, actionable answers.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        800
+      ],
+      "id": "7914a8b5-927a-483e-b4ce-f12bf2d7fc41",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "maxTokens": 215,
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1496,
+        1024
+      ],
+      "id": "8fe1911b-c059-4b62-b897-b6716b5ec80a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "qjXbaztvYyb6HCiU",
+          "name": "n8n test key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Build Context').item.json.session_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1632,
+        1024
+      ],
+      "id": "1c0c84a1-1a62-4975-9e51-2f3b2fd2171b",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "YWVEoSrUEMwEna9E",
+          "name": "HR RAG"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Chat Agent",
+        "height": 656,
+        "width": 2148,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        96,
+        656
+      ],
+      "id": "f3fa210c-853f-4de2-8da0-042c84ca1118",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "73ebaeac-2de2-4ae7-beee-22dd18e85acc",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        144,
+        800
+      ],
+      "id": "8b9efa1e-95c3-498a-b807-e5bbd40111bd",
+      "name": "Webhook",
+      "webhookId": "73ebaeac-2de2-4ae7-beee-22dd18e85acc"
+    },
+    {
+      "parameters": {
+        "content": "## Webhook Payload\n\n```\n{\n  \"question\": \"When does my probation period end?\",\n  \"session_id\": \"eval-171719820800000\"\n}\n```\n`session_id` is required for memory. If a browser client doesn't send one, generate a UUID in a Code node before the agent runs",
+        "height": 240,
+        "width": 592,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        672
+      ],
+      "id": "33fe8a90-a494-4749-a0ad-9d9e5dbfc618",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Response Shape\n\n```\n{\n  \"answer\": \"Your probation period lasts 3 months...\",\n  \"sources\": [\"Duration: 3 months for all new employees...\", \"A formal review takes place...\"],\n  \"session_id\": \"eval-1719820800000\"\n}\n```\n`sources `is the critical one. If you don't return it, the judge gets \"(no sources provided by RAG)\" and will score groundedness low",
+        "height": 272,
+        "width": 592,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        944
+      ],
+      "id": "8e8f57e7-66c8-4924-9854-4b0284694a28",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\n\nreturn [{\n  json: {\n    question: body.question,\n    session_id: body.session_id || ('sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8))\n  }\n}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        800
+      ],
+      "id": "631acb01-3c69-4535-9e47-04765ea5945f",
+      "name": "Extract Question"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2064,
+        800
+      ],
+      "id": "c2d55618-f57f-4dfc-8642-1cc9cb076c16",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": \"{{ $json.question }}\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        592,
+        800
+      ],
+      "id": "d80b0b91-523b-44d0-b975-3cfdf4798803",
+      "name": "Embed",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "hVaRxembR0aW7ssS",
+          "name": "gpt-embeddings"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://xnqyedhksjwuuewtcdrg.supabase.co/rest/v1/rpc/match_documents",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apiKey",
+              "value": "YOUR_SUPABASE_SECRET_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query_embedding\": {{ $json.query_embedding }},\n  \"match_count\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1040,
+        800
+      ],
+      "id": "65760447-4b60-49ac-bf2a-282be1bd6ab4",
+      "name": "Retrieval",
+      "alwaysOutputData": false,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "zpw6nPZULBtG7WDT",
+          "name": "supabase-HR-RAG"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const question = $('Extract Question').first().json.question;\nconst session_id = $('Extract Question').first().json.session_id;\nconst chunks = $input.all().map(item => item.json); // array of 3 chunks\n\nconst contextText = chunks\n  .map((c, i) => `[${i + 1}] Source: ${c.source_file} — ${c.section}\\n${c.content}`)\n  .join('\\n\\n');\n\nreturn [{\n  json: {\n    session_id,\n    chunks: chunks.map(c => c.content), // saved for sources in the final response\n    chatInput: `QUESTION: ${question}\\n\\n\\nRETRIEVED CONTEXT:\\n${contextText}`\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        800
+      ],
+      "id": "c47ae07f-0e24-41e4-932c-6e84003f25ae",
+      "name": "Build Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "const answer = $input.first().json.output;\nconst chunks = $('Build Context').first().json.chunks;\nconst session_id = $('Build Context').first().json.session_Id;\n\nreturn [{\n  json: {\n    answer,\n    sources: chunks,\n    session_id\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        800
+      ],
+      "id": "006ccfa7-f6cb-4d05-bb75-746decb83b11",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const embedding = $input.first().json.data[0].embedding;\nconst session_id = $('Extract Question').first().json.session_id;\nconst question = $('Extract Question').first().json.question;\n\nreturn [{\n  json: {\n    query_embedding: '[' + embedding.join(',') + ']',\n    match_count: 3,\n    session_id,\n    question\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        800
+      ],
+      "id": "f549a107-f796-45ce-be36-c1ca614e8cce",
+      "name": "Format Vector"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Question": {
+      "main": [
+        [
+          {
+            "node": "Embed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed": {
+      "main": [
+        [
+          {
+            "node": "Format Vector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieval": {
+      "main": [
+        [
+          {
+            "node": "Build Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Vector": {
+      "main": [
+        [
+          {
+            "node": "Retrieval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "77d66493-c06b-4589-97cc-a012a890795f",
+  "meta": {
+    "templateId": "self-building-ai-agent",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c76905927781624afedefcff74098e89a43444e69bfc5660dd1e8f055cb20947"
+  },
+  "id": "1RP2OEfc6KiqdKhv",
+  "tags": []
+}
