@@ -1,14 +1,16 @@
 # HR Onboarding RAG Assistant
 
-A retrieval-augmented generation system that answers new-hire questions over a synthetic employee handbook. The system is evaluated against a 30-question golden set, scoring each answer on accuracy and groundedness independently.
+A retrieval-augmented generation system that answers new-hire questions over a synthetic employee handbook, built with n8n, Supabase, and OpenAI.
 
-The eval harness is the primary engineering contribution — most RAG demos measure nothing. Having structured, reproducible evaluation separates implementation from engineering.
+What I focused on most was evaluation. A lot of RAG demos look convincing but never check whether the answers are actually correct, so I built a harness that scores every answer on two independent axes, accuracy and groundedness, against a fixed 30-question set. That let me improve the system against real numbers instead of guesswork, and every result below comes from it.
 
 ---
 
 ## Evaluation results
 
-**Phase 1 — Mock baseline (2026-06-12)**
+I measured each phase before moving on to the next. The runs below are real outputs from the harness, saved under `eval/`.
+
+**Phase 1: Mock baseline (2026-06-12)**
 
 | Metric | Result |
 |--------|--------|
@@ -16,19 +18,19 @@ The eval harness is the primary engineering contribution — most RAG demos meas
 | Avg accuracy | 1.73 / 5 |
 | Avg groundedness | 2.07 / 5 |
 
-These are mock baseline numbers, run before the retrieval system existed — the expected result when the eval harness itself is under test. The harness correctly identified factual errors in mock answers (Q08: pension contribution stated as 4%, correct is 5%; A:2, G:5) and correctly scored non-answers as 1/1.
+These are mock-baseline numbers, run before the retrieval system existed, which is the result you'd expect when the harness itself is what's under test. It correctly flagged factual errors in the mock answers (Q08 gave the pension contribution as 4% when the correct figure is 5%; scored A:2, G:5) and scored non-answers as 1/1.
 
-**Phase 2 — Retrieval verified (2026-06-12)**
+**Phase 2: Retrieval verified (2026-06-12)**
 
 | Metric | Result |
 |--------|--------|
 | Chunks ingested | 25 (10 handbook + 7 checklist + 8 FAQs) |
-| Retrieval spot-check | ✅ Rank 1 correct — similarity 0.514, gap to Rank 2: 0.037 |
+| Retrieval spot-check | ✅ Rank 1 correct, similarity 0.514, gap to Rank 2: 0.037 |
 | Ingestion cost | < $0.001 |
 
 The vector store is populated and retrieval returns the correct chunk at Rank 1 for representative questions.
 
-**Phase 4 — Live RAG eval (2026-06-14)**
+**Phase 4: Live RAG eval (2026-06-14)**
 
 | Metric | Result | vs. Mock baseline |
 |--------|--------|------------------|
@@ -36,27 +38,27 @@ The vector store is populated and retrieval returns the correct chunk at Rank 1 
 | Avg accuracy | **4.87 / 5** | +3.14 |
 | Avg groundedness | **4.87 / 5** | +2.80 |
 
-The +80pp delta from the mock baseline is the measurable contribution of the retrieval pipeline. 4.87/5 groundedness means the model is not hallucinating — nearly every claim is traceable to a retrieved document chunk. The one non-pass (Q29) required multi-hop arithmetic over a prorated leave formula — the hardest question in the set.
+The +80pp jump from the mock baseline is the measurable contribution of the retrieval pipeline. A groundedness score of 4.87/5 means the model isn't hallucinating: nearly every claim traces back to a retrieved chunk. The one non-pass (Q29) needed multi-hop arithmetic over a prorated leave formula, which is the hardest question in the set.
 
-**Phase 6 — Safety eval (2026-06-15)**
+**Phase 5: Safety eval (2026-06-15)**
 
 | Metric | Result |
 |--------|--------|
 | Adversarial safe rate | **100% (10 / 10)** across 7 attack types |
 | Guardrail breaches | 0 |
-| Functional regression | 97% / 4.87 / 4.87 — **0 of 30** legitimate questions blocked |
+| Functional regression | 97% / 4.87 / 4.87, with **0 of 30** legitimate questions blocked |
 
-An input guardrail (Jailbreak + NSFW, fail-closed) screens every question before retrieval. The safety suite (`npm run eval:safety`) measures that it blocks adversarial input; the functional suite confirms it blocks **zero** legitimate traffic — the result that actually justifies keeping it.
+An input guardrail (Jailbreak and NSFW checks, set to fail closed) screens every question before retrieval. The safety suite (`npm run eval:safety`) confirms it blocks adversarial input, and the functional suite confirms it blocks none of the legitimate traffic, which is the result that actually justifies keeping it.
 
-Full methodology and result interpretation: [docs/eval-methodology.md](docs/eval-methodology.md) · [docs/eval-results.md](docs/eval-results.md)
+Full methodology and results: [docs/eval-methodology.md](docs/eval-methodology.md) and [docs/eval-results.md](docs/eval-results.md).
 
 ---
 
 ## System architecture
 
-See [docs/architecture.md](docs/architecture.md) for annotated diagrams of all three pipelines. Overview below.
+See [docs/architecture.md](docs/architecture.md) for annotated diagrams of all three pipelines. A quick overview:
 
-**Ingestion pipeline** — runs once to populate the vector store:
+**Ingestion pipeline** (runs once to populate the vector store):
 
 ```mermaid
 flowchart LR
@@ -65,7 +67,7 @@ flowchart LR
     C --> D[("Supabase\npgvector")]
 ```
 
-**Query pipeline** — runs per user message:
+**Query pipeline** (runs per user message):
 
 ```mermaid
 flowchart LR
@@ -77,7 +79,7 @@ flowchart LR
     G --> R["answer + sources"]
 ```
 
-**Eval pipeline** — runs after every system change:
+**Eval pipeline** (runs after every system change):
 
 ```mermaid
 flowchart LR
@@ -97,9 +99,8 @@ flowchart LR
 | 1 | Synthetic HR docs, 30-question golden eval set, eval harness | ✅ Complete | [phase-1-foundation.md](docs/phase-1-foundation.md) |
 | 2 | Supabase + pgvector schema, document ingestion pipeline, retrieval verification | ✅ Complete | [phase-2-ingestion.md](docs/phase-2-ingestion.md) |
 | 3 | n8n RAG flow: retrieval + generation + persistent memory | ✅ Complete | [phase-3-query-pipeline.md](docs/phase-3-query-pipeline.md) |
-| 4 | Live eval run — 97% pass rate, 4.87/5 accuracy + groundedness | ✅ Complete | [eval-results.md](docs/eval-results.md) · [eval-debug-postmortem.md](docs/eval-debug-postmortem.md) |
-| 5 | Next.js chat UI, public deployment | 🔧 In progress | — |
-| 6 | Input guardrails (Jailbreak + NSFW, fail-closed) + adversarial safety eval | ✅ Complete | [phase-6-guardrails.md](docs/phase-6-guardrails.md) |
+| 4 | Live eval run, 97% pass rate, 4.87/5 accuracy and groundedness | ✅ Complete | [eval-results.md](docs/eval-results.md), [eval-debug-postmortem.md](docs/eval-debug-postmortem.md) |
+| 5 | Input guardrails (Jailbreak + NSFW, fail-closed) + adversarial safety eval | ✅ Complete | [phase-5-guardrails.md](docs/phase-5-guardrails.md) |
 
 ---
 
@@ -116,13 +117,13 @@ npm run ingest
 # Spot-check retrieval quality before building the full query pipeline
 node test-retrieval.mjs "When does my probation period end?"
 
-# Mock mode — validates the eval harness without a live RAG endpoint
+# Mock mode: validates the eval harness without a live RAG endpoint
 npm run eval:mock
 
-# Live mode — requires RAG_URL set to a running n8n webhook
+# Live mode: requires RAG_URL set to a running n8n webhook
 npm run eval:live
 
-# Safety suite — runs the adversarial set against the guardrail
+# Safety suite: runs the adversarial set against the guardrail
 npm run eval:safety
 ```
 
@@ -163,6 +164,5 @@ hr-onboarding-rag/
 | Generation | OpenAI `gpt-4o-mini` | ~$0.15/million input tokens |
 | Vector store | Supabase + pgvector | Cosine similarity search |
 | Orchestration | n8n | Webhook-triggered RAG flow |
-| Guardrails | n8n *Check Text for Violations* | Input screening for prompt injection / NSFW, measured by adversarial eval |
-| Frontend | Next.js + TypeScript | Deployed on Vercel |
+| Guardrails | n8n Guardrails node | Input screening for jailbreak / NSFW, measured by adversarial eval |
 | Eval judge | OpenAI `gpt-4o-mini` | Structured JSON output, `temperature=0` |

@@ -1,4 +1,4 @@
-# Phase 6 — Input Guardrails (n8n)
+# Phase 5: Input Guardrails (n8n)
 
 **Status:** Complete
 **Completed:** 2026-06-15
@@ -9,13 +9,13 @@
 
 ## Why guardrails, and why now
 
-Phase 5 ships the public demo as a **static page** (in the `demo-hub` repo) rather than a live proxy to the n8n webhook, specifically to avoid per-recruiter inference cost. That decision lowers — but does not remove — the threat surface:
+The n8n webhook is a live, internet-reachable endpoint, so the threat surface is real even though this repo ships no public chat UI:
 
-- The n8n webhook (`POST /webhook/73ebaeac-…`) is still live and reachable by anyone who learns the URL (it's referenced in the eval tooling and could leak).
+- The webhook (`POST /webhook/73ebaeac-…`) is reachable by anyone who learns the URL (it's referenced in the eval tooling and could leak).
 - The eval harness itself sends arbitrary text to the endpoint.
 - As a portfolio artifact, demonstrating a *measured* safety layer is itself the deliverable — most RAG demos have none.
 
-So the value here is **defense-in-depth on a still-live endpoint + a portfolio-grade safety story**, not urgent public-attack mitigation.
+So the value here is **defense-in-depth on a live endpoint + a portfolio-grade safety story**, not urgent public-attack mitigation.
 
 ### What the pipeline already mitigates (before any guardrail)
 
@@ -257,7 +257,7 @@ If you later want hard topical enforcement (e.g. to stop the endpoint being used
 
 ---
 
-## Phase 6 completion criteria
+## Phase 5 completion criteria
 
 | Criterion | Status |
 |-----------|--------|

@@ -23,7 +23,7 @@ flowchart TD
 
 **Why `text-embedding-3-small`:** It produces 1536-dimensional vectors, costs approximately $0.02 per million tokens, and performs comparably to larger embedding models on retrieval benchmarks. The full HR document set is around 5,000 tokens — the one-time ingestion cost is below $0.01.
 
-**What gets stored:** Each row in the `documents` table holds the raw chunk text (`content`), its vector (`embedding`), and metadata such as source filename and section heading. The source metadata is returned alongside answers so the chat UI can display citations.
+**What gets stored:** Each row in the `documents` table holds the raw chunk text (`content`), its vector (`embedding`), and metadata such as source filename and section heading. The source metadata is returned alongside answers so a chat client can display citations.
 
 ---
 
@@ -50,7 +50,7 @@ flowchart LR
     style RF fill:#fde8e8
 ```
 
-**Input guardrail:** An n8n *Check Text for Violations* node screens each question for prompt injection and NSFW content before any paid call (embed, retrieve, generate) runs. A violation short-circuits to a safe refusal in the same `{ answer, sources, session_id }` shape; a clean question proceeds unchanged. This is defense-in-depth on top of the grounding constraint, and it is measured by a dedicated adversarial eval slice — see [phase-6-guardrails.md](phase-6-guardrails.md) and [eval-methodology.md](eval-methodology.md#L131).
+**Input guardrail:** An n8n *Check Text for Violations* node screens each question for prompt injection and NSFW content before any paid call (embed, retrieve, generate) runs. A violation short-circuits to a safe refusal in the same `{ answer, sources, session_id }` shape; a clean question proceeds unchanged. This is defense-in-depth on top of the grounding constraint, and it is measured by a dedicated adversarial eval slice — see [phase-5-guardrails.md](phase-5-guardrails.md) and [eval-methodology.md](eval-methodology.md#L131).
 
 **Retrieval:** The user's question is embedded with the same model used during ingestion (`text-embedding-3-small`). The vector is compared against all stored chunk embeddings using cosine similarity. The top 3 chunks are returned — enough context for most HR questions without exceeding the prompt budget.
 
@@ -100,4 +100,3 @@ flowchart TD
 | `eval/golden-set.json` | Define the functional test cases (accuracy + groundedness) | JSON |
 | `eval/adversarial-set.json` | Define the adversarial test cases (safety) | JSON |
 | `eval/eval.mjs` | Run functional + adversarial evals and score answers | Node.js, OpenAI API |
-| Next.js UI | Chat interface + eval results display | Next.js, TypeScript |
