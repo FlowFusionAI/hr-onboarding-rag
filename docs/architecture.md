@@ -35,7 +35,9 @@ The query pipeline runs per user message. It retrieves the most relevant documen
 flowchart LR
     U["User question\ne.g. 'When does my private\nhealth insurance start?'"]
     U --> W["n8n Webhook\nPOST /webhook/rag-chat\nbody: { question, session_id }"]
-    W --> E["Embed question\ntext-embedding-3-small\n→ 1536-dim vector"]
+    W --> GR{"Input guardrail\ncheck violations\nprompt-injection + NSFW"}
+    GR -->|violation| RF["Safe refusal\n{ answer, sources:[], blocked:true }"]
+    GR -->|passed| E["Embed question\ntext-embedding-3-small\n→ 1536-dim vector"]
     E --> VS[("Supabase\nmatch_documents RPC\ncosine similarity\nreturns top-3 chunks")]
     VS --> P["Prompt builder\nsystem instructions +\nretrieved chunks +\nuser question"]
     P --> LLM["OpenAI GPT-4o-mini\ntemperature: 0.2\nmax_tokens: 512"]
@@ -44,7 +46,11 @@ flowchart LR
 
     style VS fill:#e8f4fd
     style MEM fill:#e8f4fd
+    style GR fill:#fde8e8
+    style RF fill:#fde8e8
 ```
+
+**Input guardrail:** An n8n *Check Text for Violations* node screens each question for prompt injection and NSFW content before any paid call (embed, retrieve, generate) runs. A violation short-circuits to a safe refusal in the same `{ answer, sources, session_id }` shape; a clean question proceeds unchanged. This is defense-in-depth on top of the grounding constraint, and it is measured by a dedicated adversarial eval slice — see [phase-6-guardrails.md](phase-6-guardrails.md) and [eval-methodology.md](eval-methodology.md#L131).
 
 **Retrieval:** The user's question is embedded with the same model used during ingestion (`text-embedding-3-small`). The vector is compared against all stored chunk embeddings using cosine similarity. The top 3 chunks are returned — enough context for most HR questions without exceeding the prompt budget.
 
@@ -90,6 +96,8 @@ flowchart TD
 | Supabase `documents` | Store chunk embeddings for similarity search | Postgres + pgvector |
 | Supabase `chat_history` | Store conversation turns for multi-turn memory | Postgres |
 | n8n workflow | Orchestrate the query pipeline | n8n |
-| `eval/golden-set.json` | Define the test cases | JSON |
-| `eval/eval.mjs` | Run the evaluation and score answers | Node.js, OpenAI API |
+| n8n guardrail node | Screen input for prompt injection / NSFW before paid calls | n8n Guardrails (LLM classifier) |
+| `eval/golden-set.json` | Define the functional test cases (accuracy + groundedness) | JSON |
+| `eval/adversarial-set.json` | Define the adversarial test cases (safety) | JSON |
+| `eval/eval.mjs` | Run functional + adversarial evals and score answers | Node.js, OpenAI API |
 | Next.js UI | Chat interface + eval results display | Next.js, TypeScript |

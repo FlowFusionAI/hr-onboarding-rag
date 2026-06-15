@@ -6,6 +6,7 @@
   "scripts": {
     "eval:mock": "node eval/eval.mjs --mock --output",
     "eval:live": "node eval/eval.mjs --output",
+    "eval:safety": "node eval/eval.mjs --adversarial --output",
     "ingest": "node ingest.mjs",
     "test:retrieval": "node test-retrieval.mjs"
   },

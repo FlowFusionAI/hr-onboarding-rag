@@ -38,6 +38,16 @@ The vector store is populated and retrieval returns the correct chunk at Rank 1 
 
 The +80pp delta from the mock baseline is the measurable contribution of the retrieval pipeline. 4.87/5 groundedness means the model is not hallucinating — nearly every claim is traceable to a retrieved document chunk. The one non-pass (Q29) required multi-hop arithmetic over a prorated leave formula — the hardest question in the set.
 
+**Phase 6 — Safety eval (2026-06-15)**
+
+| Metric | Result |
+|--------|--------|
+| Adversarial safe rate | **100% (10 / 10)** across 7 attack types |
+| Guardrail breaches | 0 |
+| Functional regression | 97% / 4.87 / 4.87 — **0 of 30** legitimate questions blocked |
+
+An input guardrail (Jailbreak + NSFW, fail-closed) screens every question before retrieval. The safety suite (`npm run eval:safety`) measures that it blocks adversarial input; the functional suite confirms it blocks **zero** legitimate traffic — the result that actually justifies keeping it.
+
 Full methodology and result interpretation: [docs/eval-methodology.md](docs/eval-methodology.md) · [docs/eval-results.md](docs/eval-results.md)
 
 ---
@@ -89,6 +99,7 @@ flowchart LR
 | 3 | n8n RAG flow: retrieval + generation + persistent memory | ✅ Complete | [phase-3-query-pipeline.md](docs/phase-3-query-pipeline.md) |
 | 4 | Live eval run — 97% pass rate, 4.87/5 accuracy + groundedness | ✅ Complete | [eval-results.md](docs/eval-results.md) · [eval-debug-postmortem.md](docs/eval-debug-postmortem.md) |
 | 5 | Next.js chat UI, public deployment | 🔧 In progress | — |
+| 6 | Input guardrails (Jailbreak + NSFW, fail-closed) + adversarial safety eval | ✅ Complete | [phase-6-guardrails.md](docs/phase-6-guardrails.md) |
 
 ---
 
@@ -110,6 +121,9 @@ npm run eval:mock
 
 # Live mode — requires RAG_URL set to a running n8n webhook
 npm run eval:live
+
+# Safety suite — runs the adversarial set against the guardrail
+npm run eval:safety
 ```
 
 ---
@@ -123,8 +137,9 @@ hr-onboarding-rag/
 │   ├── onboarding-checklist.md
 │   └── role-faqs.md
 ├── eval/                      evaluation harness
-│   ├── eval.mjs               automated scoring script
-│   ├── golden-set.json        30 Q&A pairs across 14 categories
+│   ├── eval.mjs               automated scoring script (functional + safety suites)
+│   ├── golden-set.json        30 Q&A pairs across 14 categories (functional)
+│   ├── adversarial-set.json   10 adversarial cases across 7 attack types (safety)
 │   └── results-*.json         eval run outputs
 ├── docs/                      project documentation
 │   ├── architecture.md
@@ -148,5 +163,6 @@ hr-onboarding-rag/
 | Generation | OpenAI `gpt-4o-mini` | ~$0.15/million input tokens |
 | Vector store | Supabase + pgvector | Cosine similarity search |
 | Orchestration | n8n | Webhook-triggered RAG flow |
+| Guardrails | n8n *Check Text for Violations* | Input screening for prompt injection / NSFW, measured by adversarial eval |
 | Frontend | Next.js + TypeScript | Deployed on Vercel |
 | Eval judge | OpenAI `gpt-4o-mini` | Structured JSON output, `temperature=0` |
